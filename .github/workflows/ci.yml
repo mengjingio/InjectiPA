@@ -1,0 +1,58 @@
+name: macOS CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    name: Build macOS app
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Ruby (for tools if needed)
+        uses: ruby/setup-ruby@v1
+
+      - name: Show Xcode info
+        run: |
+          xcode-select -p
+          xcodebuild -version
+
+      - name: Build with xcodebuild
+        env:
+          DERIVED_DATA: ${{ github.workspace }}/build
+        run: |
+          set -e
+          # Use workspace scheme available in the repo
+          xcodebuild -workspace InjectiPA.xcworkspace \
+            -scheme InjectiPA \
+            -configuration Release \
+            -sdk macosx \
+            -derivedDataPath "$DERIVED_DATA" \
+            CODE_SIGNING_ALLOWED=NO \
+            clean build
+
+      - name: Package .app
+        env:
+          DERIVED_DATA: ${{ github.workspace }}/build
+        run: |
+          set -e
+          APP_PATH="$DERIVED_DATA/Build/Products/Release/InjectiPA.app"
+          if [ -d "$APP_PATH" ]; then
+            ZIP_PATH="$GITHUB_WORKSPACE/InjectiPA-macos-release.zip"
+            /usr/bin/zip -r "$ZIP_PATH" "$APP_PATH"
+            echo "ZIPPED=$ZIP_PATH" >> $GITHUB_ENV
+          else
+            echo "App not found at $APP_PATH" && exit 2
+          fi
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: InjectiPA-macos-release
+          path: InjectiPA-macos-release.zip
