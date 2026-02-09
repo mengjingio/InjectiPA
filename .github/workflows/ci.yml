@@ -30,14 +30,40 @@ jobs:
           DERIVED_DATA: ${{ github.workspace }}/build
         run: |
           set -e
-          # Use workspace scheme available in the repo
-          xcodebuild -workspace InjectiPA.xcworkspace \
-            -scheme InjectiPA \
-            -configuration Release \
-            -sdk macosx \
-            -derivedDataPath "$DERIVED_DATA" \
-            CODE_SIGNING_ALLOWED=NO \
-            clean build
+          # Prefer explicit workspace if present, fall back to project or generic workspace name
+          DERIVED="$DERIVED_DATA"
+          if [ -f "InjectiPA.xcworkspace" ]; then
+            echo "Using InjectiPA.xcworkspace"
+            xcodebuild -workspace InjectiPA.xcworkspace \
+              -scheme InjectiPA \
+              -configuration Release \
+              -sdk macosx \
+              -derivedDataPath "$DERIVED" \
+              CODE_SIGNING_ALLOWED=NO \
+              clean build
+          elif [ -d "project.xcworkspace" ]; then
+            echo "Using project.xcworkspace"
+            xcodebuild -workspace project.xcworkspace \
+              -scheme InjectiPA \
+              -configuration Release \
+              -sdk macosx \
+              -derivedDataPath "$DERIVED" \
+              CODE_SIGNING_ALLOWED=NO \
+              clean build
+          elif [ -f "InjectiPA.xcodeproj/project.pbxproj" ] || [ -d "InjectiPA.xcodeproj" ]; then
+            echo "Using InjectiPA.xcodeproj"
+            xcodebuild -project InjectiPA.xcodeproj \
+              -scheme InjectiPA \
+              -configuration Release \
+              -sdk macosx \
+              -derivedDataPath "$DERIVED" \
+              CODE_SIGNING_ALLOWED=NO \
+              clean build
+          else
+            echo "No workspace or project found in repository root:" >&2
+            ls -la
+            exit 66
+          fi
 
       - name: Package .app
         env:
