@@ -59,8 +59,8 @@ struct ContentView: View {
                 ScrollView {
                     let columns = [GridItem(.adaptive(minimum: 260), spacing: 16)]
                     LazyVGrid(columns: columns, spacing: 16) {
-                        ForEach(Array(ipaInfos.enumerated()), id: \.
-                            1.id) { idx, info in
+                        ForEach(ipaInfos.indices, id: \.self) { idx in
+                            let info = ipaInfos[idx]
                             IPAInfoCard(info: info,
                                         onSaveIcon: { saveIcon(for: info) },
                                         onRemove: {
