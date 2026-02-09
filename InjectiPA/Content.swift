@@ -12,6 +12,8 @@ struct ContentView: View {
     @State private var dylibPath: URL?
     @State private var ipaPaths: [URL] = []
     @State private var ipaInfos: [IPAInfo] = []
+    @State private var isLoadingIPA: Bool = false
+    @State private var ipaLoadErrors: [String] = []
     @State private var isHoveringInject = false
     @State private var showAlert = false
     @State private var alertMessage = ""
@@ -55,6 +57,24 @@ struct ContentView: View {
             }
 
             // 显示已导入 IPA 的元数据（卡片式）
+            if isLoadingIPA {
+                HStack {
+                    ProgressView()
+                    Text("解析 IPA 中...")
+                        .foregroundColor(.secondary)
+                }
+            }
+
+            if !ipaLoadErrors.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(ipaLoadErrors, id: \.self) { e in
+                        Text("解析失败: \(e)")
+                            .font(.caption)
+                            .foregroundColor(.red)
+                    }
+                }
+            }
+
             if !ipaInfos.isEmpty {
                 ScrollView {
                     let columns = [GridItem(.adaptive(minimum: 260), spacing: 16)]
@@ -225,15 +245,23 @@ struct ContentView: View {
 
     private func loadIPAInfos() {
         ipaInfos.removeAll()
+        ipaLoadErrors.removeAll()
+        isLoadingIPA = true
         DispatchQueue.global(qos: .userInitiated).async {
             var results: [IPAInfo] = []
+            var errors: [String] = []
             for url in ipaPaths {
                 if let info = Utils.parseIPA(ipaPath: url) {
                     results.append(info)
+                } else {
+                    errors.append(url.lastPathComponent)
+                    print("❌ parseIPA failed for: \(url.path)")
                 }
             }
             DispatchQueue.main.async {
                 ipaInfos = results
+                ipaLoadErrors = errors.map { "\($0)" }
+                isLoadingIPA = false
             }
         }
     }
