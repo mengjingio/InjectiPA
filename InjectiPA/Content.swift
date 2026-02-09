@@ -29,6 +29,7 @@ struct ContentView: View {
             Text("InjectiPA")
                 .font(.largeTitle)
                 .fontWeight(.bold)
+                .textSelection(.enabled)
 
             Link(destination: URL(string: "https://github.com/TrialMacApp")!, label: {
                 Image(systemName: "link")
@@ -330,15 +331,18 @@ struct ContentView: View {
                         Text(info.name)
                             .font(.headline)
                             .lineLimit(2)
+                            .textSelection(.enabled)
                         HStack {
                             Text(info.version)
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
+                                .textSelection(.enabled)
                             Spacer()
                         }
                         Text(info.bundleID)
                             .font(.caption)
                             .foregroundColor(.secondary)
+                            .textSelection(.enabled)
                     }
                 }
 
@@ -351,6 +355,7 @@ struct ContentView: View {
                             .font(.caption2)
                             .foregroundColor(.blue)
                             .lineLimit(2)
+                            .textSelection(.enabled)
                     }
                 }
 
