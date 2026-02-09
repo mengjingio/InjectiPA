@@ -83,6 +83,7 @@ struct ContentView: View {
                             let info = ipaInfos[idx]
                             IPAInfoCard(info: info,
                                         onSaveIcon: { saveIcon(for: info) },
+                                        onSaveIPA: { saveOriginalIPA(for: info) },
                                         onRemove: {
                                             // remove by url to keep selections in sync
                                             if let i = ipaInfos.firstIndex(where: { $0.id == info.id }) {
@@ -122,7 +123,10 @@ struct ContentView: View {
             }
         }
         .padding(32)
-        .frame(width: 500, height: 400)
+        .frame(minWidth: 700, minHeight: 640)
+        .onAppear {
+            loadIPAInfos()
+        }
         .alert("Injection Status", isPresented: $showAlert) {
             Button("OK") {}
         } message: {
@@ -280,10 +284,28 @@ struct ContentView: View {
         }
     }
 
+    private func saveOriginalIPA(for info: IPAInfo) {
+        let panel = NSSavePanel()
+        panel.allowedFileTypes = ["ipa"]
+        panel.nameFieldStringValue = info.url.lastPathComponent
+        panel.title = "Save IPA to..."
+        if panel.runModal() == .OK, let saveURL = panel.url {
+            do {
+                if FileManager.default.fileExists(atPath: saveURL.path) {
+                    try FileManager.default.removeItem(at: saveURL)
+                }
+                try FileManager.default.copyItem(at: info.url, to: saveURL)
+            } catch {
+                print("❌ 保存原始 IPA 失败: \(error.localizedDescription)")
+            }
+        }
+    }
+
     // 卡片视图组件
     struct IPAInfoCard: View {
         let info: IPAInfo
         let onSaveIcon: () -> Void
+        let onSaveIPA: () -> Void
         let onRemove: () -> Void
 
         var body: some View {
@@ -296,6 +318,7 @@ struct ContentView: View {
                             .cornerRadius(12)
                             .shadow(radius: 2)
                             .onTapGesture { onSaveIcon() }
+                            .help("Click to save icon")
                     } else {
                         Image(systemName: "app.fill")
                             .resizable()
@@ -343,8 +366,13 @@ struct ContentView: View {
                 }
             }
             .padding()
-            .background(RoundedRectangle(cornerRadius: 12).fill(Color(.textBackgroundColor)))
+            .background(RoundedRectangle(cornerRadius: 12).fill(Color(NSColor.windowBackgroundColor)))
             .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.gray.opacity(0.12)))
+            .contextMenu {
+                Button("Save Icon") { onSaveIcon() }
+                Button("Save IPA") { onSaveIPA() }
+                Button(role: .destructive) { onRemove() } label: { Text("Remove") }
+            }
         }
     }
 }
