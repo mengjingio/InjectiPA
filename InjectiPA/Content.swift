@@ -54,51 +54,29 @@ struct ContentView: View {
                 loadIPAInfos()
             }
 
-            // 显示已导入 IPA 的元数据
+            // 显示已导入 IPA 的元数据（卡片式）
             if !ipaInfos.isEmpty {
                 ScrollView {
-                    VStack(spacing: 12) {
-                        ForEach(ipaInfos) { info in
-                            HStack(spacing: 12) {
-                                if let nsImg = info.icon {
-                                    Image(nsImage: nsImg)
-                                        .resizable()
-                                        .frame(width: 64, height: 64)
-                                        .cornerRadius(8)
-                                        .onTapGesture {
-                                            saveIcon(for: info)
-                                        }
-                                } else {
-                                    Image(systemName: "app.fill")
-                                        .resizable()
-                                        .frame(width: 64, height: 64)
-                                        .foregroundColor(.gray)
-                                }
-
-                                VStack(alignment: .leading, spacing: 6) {
-                                    Text(info.name)
-                                        .font(.headline)
-                                    Text(info.version)
-                                        .font(.subheadline)
-                                        .foregroundColor(.secondary)
-                                    Text(info.bundleID)
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                    if !info.dylibs.isEmpty {
-                                        Text("已存在动态库: \(info.dylibs.joined(separator: ", "))")
-                                            .font(.caption2)
-                                            .foregroundColor(.blue)
-                                    }
-                                }
-
-                                Spacer()
-                            }
-                            .padding()
-                            .background(RoundedRectangle(cornerRadius: 8).fill(Color(.textBackgroundColor)))
+                    let columns = [GridItem(.adaptive(minimum: 260), spacing: 16)]
+                    LazyVGrid(columns: columns, spacing: 16) {
+                        ForEach(Array(ipaInfos.enumerated()), id: \.
+                            1.id) { idx, info in
+                            IPAInfoCard(info: info,
+                                        onSaveIcon: { saveIcon(for: info) },
+                                        onRemove: {
+                                            // remove by url to keep selections in sync
+                                            if let i = ipaInfos.firstIndex(where: { $0.id == info.id }) {
+                                                ipaInfos.remove(at: i)
+                                            }
+                                            if let p = ipaPaths.firstIndex(of: info.url) {
+                                                ipaPaths.remove(at: p)
+                                            }
+                                        })
                         }
                     }
+                    .padding(.top, 8)
                 }
-                .frame(maxHeight: 220)
+                .frame(maxHeight: 420)
             }
 
             Spacer()
@@ -271,6 +249,74 @@ struct ContentView: View {
                let data = rep.representation(using: .png, properties: [:]) {
                 try? data.write(to: saveURL)
             }
+        }
+    }
+
+    // 卡片视图组件
+    struct IPAInfoCard: View {
+        let info: IPAInfo
+        let onSaveIcon: () -> Void
+        let onRemove: () -> Void
+
+        var body: some View {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(alignment: .top, spacing: 12) {
+                    if let nsImg = info.icon {
+                        Image(nsImage: nsImg)
+                            .resizable()
+                            .frame(width: 72, height: 72)
+                            .cornerRadius(12)
+                            .shadow(radius: 2)
+                            .onTapGesture { onSaveIcon() }
+                    } else {
+                        Image(systemName: "app.fill")
+                            .resizable()
+                            .frame(width: 72, height: 72)
+                            .foregroundColor(.gray)
+                    }
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(info.name)
+                            .font(.headline)
+                            .lineLimit(2)
+                        HStack {
+                            Text(info.version)
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                            Spacer()
+                        }
+                        Text(info.bundleID)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+
+                if !info.dylibs.isEmpty {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("已存在动态库:")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        Text(info.dylibs.joined(separator: ", "))
+                            .font(.caption2)
+                            .foregroundColor(.blue)
+                            .lineLimit(2)
+                    }
+                }
+
+                HStack {
+                    Spacer()
+                    Button {
+                        onRemove()
+                    } label: {
+                        Image(systemName: "trash")
+                    }
+                    .buttonStyle(.plain)
+                    .help("Remove this IPA from list")
+                }
+            }
+            .padding()
+            .background(RoundedRectangle(cornerRadius: 12).fill(Color(.textBackgroundColor)))
+            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.gray.opacity(0.12)))
         }
     }
 }
